@@ -42,58 +42,95 @@ public class MenuPrincipal {
             }
         }
     }
-
+    // Operación: Cargar desde JSON
     private void cargarDesdeJson() {
         try (FileReader reader = new FileReader("src/logica/inventario.json")) {
             Gson gson = new Gson();
             Paquete[] lista = gson.fromJson(reader, Paquete[].class);
-            if (lista != null) {
-                for (Paquete p : lista) {
-                    String idString = String.valueOf(p.getId());
-
-                    if (!idsUsados.contains(idString)) {
-                        idsUsados.add(idString);
-                        Paquete<String> nuevo = new Paquete<>(idString, p.getPeso(), p.getDestino(), p.isUrgente(), (String)p.getContenido());
-                        centro.recibirPaquete(nuevo);
+            if (lista != null) {                                        // 1
+                for (Paquete p : lista) {                               // 1 + 3n
+                    String idString = String.valueOf(p.getId());        // 2n
+                    if (!idsUsados.contains(idString)) {                // 2n
+                        idsUsados.add(idString);                        // n
+                        Paquete<String> nuevo = new Paquete<>(idString, p.getPeso(), p.getDestino(), p.isUrgente(), (String)p.getContenido()); // 6n
+                        centro.recibirPaquete(nuevo);                   // n
                     }
                 }
-                System.out.println("Inventario cargado exitosamente.");
+                System.out.println("Inventario cargado exitosamente."); // 1
             }
         } catch (Exception e) {
             System.out.println("Error al cargar JSON: " + e.getMessage());
         }
     }
 
+// Conteo de instrucciones (Peor caso del bloque if principal, 'n' paquetes nuevos):
+// f(n) = 1 + (1 + 3n) + 2n + 2n + n + 6n + n + 1
+// f(n) = 3 + 15n
+
+// Complejidad asintótica:
+// f(n) = O(n)
+// f(n) <= c * n
+// 3 + 15n <= c * n
+// Dividimos por n:
+// 3/n + 15 <= c
+// Acotamos: 15 + 1 = 16
+// Elegimos c = 16
+
+// Verificación:
+// n = 1: 3/1 + 15 = 18 <= 16  ✗ NO CUMPLE
+// n = 2: 3/2 + 15 = 16.5 <= 16  ✗ NO CUMPLE
+// n = 3: 3/3 + 15 = 16 <= 16  ✓ CUMPLE
+// Por lo tanto: f(n) pertenece a O(n) con c = 16 y n0 = 3
+
+
     private void cargarManual() {
-        String id;
-        // Validamos que el Id no exista
-        while (true) {
-            System.out.print("ID: ");
-            id = scanner.nextLine();
-            if (idsUsados.contains(id)) {
-                System.out.println("Ese ID ya existe. Por favor, ingrese uno nuevo.");
+        String id;                                                      // 1
+        // 'k' representa la cantidad de intentos fallidos por ID duplicado
+        while (true) {                                                  // k + 1
+            System.out.print("ID: ");                                   // k + 1
+            id = scanner.nextLine();                                    // 2k + 2
+            if (idsUsados.contains(id)) {                               // 2k + 2
+                System.out.println("Ese ID ya existe...");              // k
             } else {
-                idsUsados.add(id);
-                break;
+                idsUsados.add(id);                                      // 1
+                break;                                                  // 1
             }
         }
 
-        System.out.print("Peso: ");
-        double peso = scanner.nextDouble();
-        scanner.nextLine();
+        System.out.print("Peso: ");                                     // 1
+        double peso = scanner.nextDouble();                             // 2
+        scanner.nextLine();                                             // 1
 
-        System.out.print("Destino: ");
-        String destino = scanner.nextLine();
+        System.out.print("Destino: ");                                  // 1
+        String destino = scanner.nextLine();                            // 2
 
-        System.out.print("¿Es Urgente? (Si/No): ");
-        boolean urgente = scanner.nextLine().equalsIgnoreCase("si");
+        System.out.print("¿Es Urgente? (Si/No): ");                     // 1
+        boolean urgente = scanner.nextLine().equalsIgnoreCase("si");    // 3
 
-        System.out.print("Contenido: ");
-        String cont = scanner.nextLine();
+        System.out.print("Contenido: ");                                // 1
+        String cont = scanner.nextLine();                               // 2
 
-        centro.recibirPaquete(new Paquete<>(id, peso, destino, urgente, cont));
-        System.out.println("Paquete ingresado correctamente al Centro.");
+        centro.recibirPaquete(new Paquete<>(id, peso, destino, urgente, cont)); // 3
+        System.out.println("Paquete ingresado correctamente al Centro."); // 1
     }
+
+    /*
+     * * Conteo:
+     * f(k) = (k + 1) + (k + 1) + (2k + 2) + (2k + 2) + k + (1 + 1 + 1 + 2 + 1 + 1 + 2 + 1 + 3 + 1 + 2 + 3 + 1)
+     * f(k) = 7k + 27
+     * * Demostración:
+     * f(k) = O(k)
+     * 7k + 27 <= c * k
+     * Dividimos por k: 7 + 27/k <= c
+     * Acotamos: término dominante + 1 = 7 + 1 = 8
+     * Elegimos c = 8
+     * * Verificación de n0 (k0):
+     * n = 1: 34 <= 8 (Falso)
+     * n = 27: 8 <= 8 (Verdadero)
+     * * Resultado: f(k) pertenece a O(k) con c = 8 y k0 = 27
+     */
+
+
 
     private void despacharHaciaCamion() {
         Paquete<String> p = centro.despacharSiguiente();
