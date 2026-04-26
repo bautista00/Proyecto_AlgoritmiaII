@@ -1,144 +1,125 @@
 package logica;
 
-import java.util.HashMap;
-import java.util.Map;
+import com.google.gson.Gson;
+import java.io.FileReader;
+import java.util.HashSet;
 import java.util.Scanner;
+import java.util.Set;
 
 public class MenuPrincipal {
 
-    // Scanner para leer datos ingresados por consola
     private Scanner scanner = new Scanner(System.in);
-
-    // Diccionario de paquetes: la clave es el ID y el valor es el paquete completo
-    private Map<String, Paquete<String>> mapaDePaquetes = new HashMap<>();
-
-    // Camión que internamente maneja los paquetes con una pila
+    private CentroDistribucion centro = new CentroDistribucion();
     private Camion camion = new Camion();
 
+    private Set<String> idsUsados = new HashSet<>();
+
     public void iniciarMenu() {
-        int opcionSeleccionada = 0;
+        int opcion = 0;
+        while (opcion != 7) {
+            System.out.println("\n--- LOGI-UADE 2026: GESTIÓN LOGÍSTICA ---");
+            System.out.println("1. Cargar inventario desde JSON");
+            System.out.println("2. Cargar paquete manualmente");
+            System.out.println("3. Enviar paquete del Centro al Camión");
+            System.out.println("4. Ver estado del Camión");
+            System.out.println("5. Deshacer última carga del Camión");
+            System.out.println("6. Descargar Camión");
+            System.out.println("7. Salir");
+            System.out.print("Seleccione: ");
 
-        while (opcionSeleccionada != 7) {
-            mostrarOpcionesDelMenu();
+            opcion = scanner.nextInt();
+            scanner.nextLine();
 
-            opcionSeleccionada = scanner.nextInt();
-            scanner.nextLine(); // Limpia el salto de línea pendiente
-
-            switch (opcionSeleccionada) {
-                case 1:
-                    cargarPaqueteManual();
-                    break;
-                case 2:
-                    mostrarPaquetesCargados();
-                    break;
-                case 3:
-                    cargarPaqueteAlCamion();
-                    break;
-                case 4:
-                    mostrarPaquetesDelCamion();
-                    break;
-                case 5:
-                    descargarPaqueteDelCamion();
-                    break;
-                case 6:
-                    deshacerUltimaCargaDelCamion();
-                    break;
-                case 7:
-                    System.out.println("Saliendo del sistema...");
-                    break;
-                default:
-                    System.out.println("Opción inválida.");
+            switch (opcion) {
+                case 1: cargarDesdeJson(); break;
+                case 2: cargarManual(); break;
+                case 3: despacharHaciaCamion(); break;
+                case 4: camion.mostrarPaquetesDelCamion(); break;
+                case 5: deshacerCarga(); break;
+                case 6: descargar(); break;
+                case 7: System.out.println("Saliendo..."); break;
+                default: System.out.println("Opción no válida.");
             }
         }
     }
 
-    // Muestra las opciones disponibles para el usuario
-    private void mostrarOpcionesDelMenu() {
-        System.out.println("\n--- MENÚ PRINCIPAL ---");
-        System.out.println("1. Cargar paquete manualmente");
-        System.out.println("2. Ver paquetes cargados");
-        System.out.println("3. Cargar paquete al camión");
-        System.out.println("4. Ver paquetes del camión");
-        System.out.println("5. Descargar paquete del camión");
-        System.out.println("6. Deshacer última carga del camión");
-        System.out.println("7. Salir");
-        System.out.print("Seleccione una opción: ");
+    private void cargarDesdeJson() {
+        try (FileReader reader = new FileReader("inventario.json")) {
+            Gson gson = new Gson();
+            Paquete[] lista = gson.fromJson(reader, Paquete[].class);
+            if (lista != null) {
+                for (Paquete p : lista) {
+                    String idString = String.valueOf(p.getId());
+
+                    if (!idsUsados.contains(idString)) {
+                        idsUsados.add(idString);
+                        Paquete<String> nuevo = new Paquete<>(idString, p.getPeso(), p.getDestino(), p.isUrgente(), (String)p.getContenido());
+                        centro.recibirPaquete(nuevo);
+                    }
+                }
+                System.out.println("Inventario cargado exitosamente.");
+            }
+        } catch (Exception e) {
+            System.out.println("Error al cargar JSON: " + e.getMessage());
+        }
     }
 
-    // Crea un paquete nuevo y lo guarda en el mapa usando su ID como clave
-    private void cargarPaqueteManual() {
-        System.out.print("Ingrese ID del paquete: ");
-        String id = scanner.nextLine();
+    private void cargarManual() {
+        String id;
+        // Validamos que el Id no exista
+        while (true) {
+            System.out.print("ID: ");
+            id = scanner.nextLine();
+            if (idsUsados.contains(id)) {
+                System.out.println("Ese ID ya existe. Por favor, ingrese uno nuevo.");
+            } else {
+                idsUsados.add(id);
+                break;
+            }
+        }
 
-        System.out.print("Ingrese peso del paquete: ");
+        System.out.print("Peso: ");
         double peso = scanner.nextDouble();
         scanner.nextLine();
 
-        System.out.print("Ingrese destino del paquete: ");
+        System.out.print("Destino: ");
         String destino = scanner.nextLine();
 
-        System.out.print("Ingrese contenido del paquete: ");
-        String contenido = scanner.nextLine();
+        System.out.print("¿Es Urgente? (Si/No): ");
+        boolean urgente = scanner.nextLine().equalsIgnoreCase("si");
 
-        Paquete<String> paqueteNuevo = new Paquete<>(id, peso, destino, contenido);
+        System.out.print("Contenido: ");
+        String cont = scanner.nextLine();
 
-        mapaDePaquetes.put(id, paqueteNuevo);
-
-        System.out.println("Paquete cargado correctamente.");
+        centro.recibirPaquete(new Paquete<>(id, peso, destino, urgente, cont));
+        System.out.println("Paquete ingresado correctamente al Centro.");
     }
 
-    // Muestra todos los paquetes guardados en el mapa
-    private void mostrarPaquetesCargados() {
-        if (mapaDePaquetes.isEmpty()) {
-            System.out.println("No hay paquetes cargados.");
+    private void despacharHaciaCamion() {
+        Paquete<String> p = centro.despacharSiguiente();
+        if (p != null) {
+            camion.cargarPaqueteAlCamion(p);
+            System.out.println("Paquete enviado al camión: " + p.getId());
         } else {
-            for (Paquete<String> paquete : mapaDePaquetes.values()) {
-                System.out.println(paquete);
-            }
+            System.out.println("No hay paquetes en el centro.");
         }
     }
 
-    // Busca un paquete por ID y lo carga al camión
-    private void cargarPaqueteAlCamion() {
-        System.out.print("Ingrese el ID del paquete a cargar al camión: ");
-        String idBuscado = scanner.nextLine();
-
-        Paquete<String> paqueteEncontrado = mapaDePaquetes.get(idBuscado);
-
-        if (paqueteEncontrado == null) {
-            System.out.println("No existe un paquete con ese ID.");
+    private void deshacerCarga() {
+        Paquete<String> p = camion.deshacerUltimaCargaDelCamion();
+        if (p != null) {
+            System.out.println("Carga deshecha: " + p.getId());
         } else {
-            camion.cargarPaqueteAlCamion(paqueteEncontrado);
-            System.out.println("Paquete cargado al camión correctamente.");
+            System.out.println("Camión vacío.");
         }
     }
 
-    // Muestra los paquetes que están actualmente dentro del camión
-    private void mostrarPaquetesDelCamion() {
-        camion.mostrarPaquetesDelCamion();
-    }
-
-    // Descarga el último paquete cargado al camión
-    private void descargarPaqueteDelCamion() {
-        Paquete<String> paqueteDescargado = camion.descargarPaqueteDelCamion();
-
-        if (paqueteDescargado == null) {
-            System.out.println("El camión está vacío.");
+    private void descargar() {
+        Paquete<String> p = camion.descargarPaqueteDelCamion();
+        if (p != null) {
+            System.out.println("Descargando: " + p);
         } else {
-            System.out.println("Paquete descargado:");
-            System.out.println(paqueteDescargado);
-        }
-    }
-
-    // Deshace la última carga realizada en el camión
-    private void deshacerUltimaCargaDelCamion() {
-        Paquete<String> paqueteEliminado = camion.deshacerUltimaCargaDelCamion();
-
-        if (paqueteEliminado == null) {
-            System.out.println("No hay cargas para deshacer.");
-        } else {
-            System.out.println("Se deshizo la carga del paquete:");
-            System.out.println(paqueteEliminado);
+            System.out.println("Camión vacío.");
         }
     }
 }
