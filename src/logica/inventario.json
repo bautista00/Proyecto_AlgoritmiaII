@@ -1,0 +1,14 @@
+[
+    {
+      "id": 1,
+      "peso": 45.5,
+      "destino": "CABA",
+      "contenido": "Electronica"
+    },
+    {
+      "id": 2,
+      "peso": 60.0,
+      "destino": "Cordoba",
+      "contenido": "Alimento"
+    }
+  ]
