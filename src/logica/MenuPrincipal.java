@@ -44,7 +44,7 @@ public class MenuPrincipal {
     }
 
     private void cargarDesdeJson() {
-        try (FileReader reader = new FileReader("inventario.json")) {
+        try (FileReader reader = new FileReader("src/logica/inventario.json")) {
             Gson gson = new Gson();
             Paquete[] lista = gson.fromJson(reader, Paquete[].class);
             if (lista != null) {
