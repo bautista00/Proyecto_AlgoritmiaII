@@ -1,6 +1,7 @@
 package logica;
 
 import com.google.gson.Gson;
+
 import java.io.FileReader;
 import java.util.HashSet;
 import java.util.Scanner;
@@ -11,12 +12,14 @@ public class MenuPrincipal {
     private Scanner scanner = new Scanner(System.in);
     private CentroDistribucion centro = new CentroDistribucion();
     private Camion camion = new Camion();
+    private ABB arbolDepositos = new ABB();
+    private RedDepositos redDepositos = new RedDepositos(100);
 
     private Set<String> idsUsados = new HashSet<>();
 
     public void iniciarMenu() {
         int opcion = 0;
-        while (opcion != 7) {
+        while (opcion != 13) {
             System.out.println("\n--- LOGI-UADE 2026: GESTIÓN LOGÍSTICA ---");
             System.out.println("1. Cargar inventario desde JSON");
             System.out.println("2. Cargar paquete manualmente");
@@ -24,7 +27,14 @@ public class MenuPrincipal {
             System.out.println("4. Ver estado del Camión");
             System.out.println("5. Deshacer última carga del Camión");
             System.out.println("6. Descargar Camión");
-            System.out.println("7. Salir");
+            System.out.println("--- Depósitos ---");
+            System.out.println("7. Cargar depósitos desde JSON");
+            System.out.println("8. Insertar depósito en el ABB");
+            System.out.println("9. Auditar depósitos");
+            System.out.println("10. Imprimir depósitos por nivel");
+            System.out.println("11. Buscar depósito");
+            System.out.println("12. Calcular ruta entre depósitos");
+            System.out.println("13. Salir");
             System.out.print("Seleccione: ");
 
             opcion = scanner.nextInt();
@@ -37,11 +47,18 @@ public class MenuPrincipal {
                 case 4: camion.mostrarPaquetesDelCamion(); break;
                 case 5: deshacerCarga(); break;
                 case 6: descargar(); break;
-                case 7: System.out.println("Saliendo..."); break;
+                case 7: cargarDepositosDesdeJson(); break;
+                case 8: insertarDeposito(); break;
+                case 9: arbolDepositos.auditarDepositos(); break;
+                case 10: imprimirNivel(); break;
+                case 11: buscarDeposito(); break;
+                case 12: calcularRuta(); break;
+                case 13: System.out.println("Saliendo..."); break;
                 default: System.out.println("Opción no válida.");
             }
         }
     }
+        
     // Operación: Cargar desde JSON
     private void cargarDesdeJson() {
         try (FileReader reader = new FileReader("src/logica/inventario.json")) {
@@ -159,4 +176,63 @@ public class MenuPrincipal {
             System.out.println("Camión vacío.");
         }
     }
+
+
+    private void insertarDeposito() {
+        System.out.print("ID del depósito: ");
+        int id = scanner.nextInt();
+        scanner.nextLine();
+        arbolDepositos.insertar(id);
+        System.out.println("Depósito " + id + " insertado.");
+    }
+
+    private void imprimirNivel() {
+        System.out.print("Nivel a imprimir: ");
+        int nivel = scanner.nextInt();
+        scanner.nextLine();
+        arbolDepositos.imprimirNivel(nivel);
+    }
+
+    private void buscarDeposito() {
+        System.out.print("ID del depósito a buscar: ");
+        int id = scanner.nextInt();
+        scanner.nextLine();
+        arbolDepositos.buscar(id);
+    }
+
+    private void calcularRuta() {
+        System.out.print("ID origen: ");
+        int origen = scanner.nextInt();
+        System.out.print("ID destino: ");
+        int destino = scanner.nextInt();
+        scanner.nextLine();
+        int saltos = redDepositos.cantidadSaltos(origen, destino);
+        if (saltos == -1) {
+            System.out.println("No hay ruta entre los depósitos.");
+        } else {
+            System.out.println("Cantidad de saltos: " + saltos);
+        }
+    }
+
+    private void cargarDepositosDesdeJson() {
+        try (FileReader reader = new FileReader("src/logica/depositos.json")) {
+            Gson gson = new Gson();
+            DepositosWrapper wrapper = gson.fromJson(reader, DepositosWrapper.class);
+            if (wrapper != null && wrapper.depositos != null) {
+                for (DepositoJson d : wrapper.depositos) {
+                    arbolDepositos.insertar(d.id);
+                    if (d.conexiones != null) {
+                        for (int conexion : d.conexiones) {
+                            redDepositos.agregarRuta(d.id, conexion);
+                        }
+                    }
+                }
+                System.out.println("Depósitos cargados exitosamente.");
+            }
+        } catch (Exception e) {
+            System.out.println("Error al cargar depósitos: " + e.getMessage());
+        }
+    }
+
+
 }

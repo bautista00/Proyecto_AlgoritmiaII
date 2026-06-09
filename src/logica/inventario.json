@@ -4,13 +4,15 @@
     "peso": 45.5,
     "destino": "CABA",
     "urgente": true,
-    "contenido": "Electronica"
+    "contenido": "Electronica",
+    "zonaDestino": "Otro"
   },
   {
     "id": "2",
     "peso": 60.0,
     "destino": "Cordoba",
     "urgente": false,
-    "contenido": "Alimento"
+    "contenido": "Alimento",
+    "zonaDestino": "Centro"
   }
 ]
